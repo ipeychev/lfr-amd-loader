@@ -89,23 +89,31 @@ var LoaderProtoMethods = {
         }
 
         if (config.anonymous) {
+            var moduleName;
+
+            if (document.currentScript) {
+                // If document.currentScript is available, name the module after it.
+                var modulePath = document.currentScript.getAttribute('src');
+
+                moduleName = modulePath.substring(0, modulePath.lastIndexOf('.')).replace(this._config.url, '');
+            }
+
             // Postpone module's registration till the next scriptLoaded event
             var onScriptLoaded = function(loadedModules) {
                 self.off('scriptLoaded', onScriptLoaded);
 
-                if (loadedModules.length !== 1) {
+                if (!moduleName && loadedModules.length !== 1) {
                     throw new Error('Multiple anonymous modules cannot be served via combo service. ' +
                         'Please set `combine` to `false` or describe the modules in the config ' +
                         'and mark them as anonymous.', loadedModules);
                 } else {
-                    var moduleName = loadedModules[0];
+                    moduleName = moduleName || loadedModules[0];
                     self._define(moduleName, dependencies, implementation, config);
                 }
             };
 
             self.on('scriptLoaded', onScriptLoaded);
         } else {
-            // This is not an anonymous module, go directly to module's registration flow
             this._define(name, dependencies, implementation, config);
         }
     },
