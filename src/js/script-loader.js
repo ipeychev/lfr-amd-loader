@@ -82,8 +82,8 @@ var LoaderProtoMethods = {
                 implementation = arguments[1];
             } else {
                 console.log('DEFINE, module with one param only, this should be anonymous module');
-                dependencies = arguments[0];
                 implementation = arguments[1];
+                dependencies = arguments[0];
                 config.anonymous = true;
             }
         }
