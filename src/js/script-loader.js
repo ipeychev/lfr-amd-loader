@@ -78,12 +78,12 @@ var LoaderProtoMethods = {
                 console.log('DEFINE, module with two params only, name and implementation', name);
                 // there are two parameters, but the first one is not an array with dependencies,
                 // this is a module name
-                dependencies = ['module', 'exports'];
                 implementation = arguments[1];
+                dependencies = ['module', 'exports'];
             } else {
                 console.log('DEFINE, module with one param only, this should be anonymous module');
-                dependencies = arguments[0];
                 implementation = arguments[1];
+                dependencies = arguments[0];
                 config.anonymous = true;
             }
         }
