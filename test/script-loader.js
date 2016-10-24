@@ -96,6 +96,13 @@ describe('Loader', function() {
 
         global.__CONFIG__.paths = {};
 
+        global.TEST_NAMESPACE = {createdAt: Date.now()};
+
+        if (global.useNamespace) {
+            global.__CONFIG__.namespace = 'TEST_NAMESPACE';
+            global.__CONFIG__.exposeGlobal = false;
+        }
+
         require('../umd/config-parser.js');
         require('../umd/event-emitter.js');
         require('../umd/script-loader.js');
@@ -836,5 +843,45 @@ describe('Loader', function() {
                 done();
             }, 50);
         });
+    });
+
+    describe('Namespacing', function () {
+
+        global.useNamespace = true;
+
+
+        it('it should use the namespace provided by configuration', function () {
+            assert.strictEqual(Loader._config.namespace, 'TEST_NAMESPACE');
+        });
+
+        it('should be defined in the namespace speficied in the configuration', function () {
+            // According to the examples, this should not fail
+            // assert.strictEqual(typeof global.TEST_NAMESPACE.Loader, 'object');
+
+            assert.strictEqual(typeof global.TEST_NAMESPACE, 'object');
+            assert.strictEqual(typeof global.TEST_NAMESPACE.Loader, 'undefined');
+        });
+
+        it('shouldn\'t exist in the global namespace if config.exposeGlobal is false', function () {
+
+            // After looking at the source:
+            // Loader, define and require are always defined on the "global" object
+            // even if window is defined
+            assert.notStrictEqual(typeof global.Loader, 'undefined');
+            assert.notStrictEqual(typeof global.define, 'undefined');
+            assert.notStrictEqual(typeof global.require, 'undefined');
+
+            // window is not defined in tests
+            assert.strictEqual(typeof window, 'undefined');
+
+            function hasLoader() {return 'Loader' in window;}
+            function hasDefine() {return 'define' in window;}
+            function hasRequire() {return 'require' in window;}
+
+            assert.throws(hasLoader);
+            assert.throws(hasDefine);
+            assert.throws(hasRequire);
+        });
+
     });
 });
