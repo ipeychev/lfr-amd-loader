@@ -2917,7 +2917,11 @@ Object.keys(LoaderProtoMethods).forEach(function(key) {
 	}
 
 	if (namespace) {
-		window[global.__CONFIG__.namespace] = {Loader: global.Loader};
+        var ns = window[global.__CONFIG__.namespace] ? window[global.__CONFIG__.namespace] : {};
+        ns.Loader = global.Loader;
+        ns.define = global.Loader.define.bind(global.Loader);
+        ns.require = global.Loader.require.bind(global.Loader);
+		window[global.__CONFIG__.namespace] = ns;
 	} else {
 		window.Loader = global.Loader;
 	}
