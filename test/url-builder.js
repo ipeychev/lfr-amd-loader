@@ -18,6 +18,17 @@ describe('URLBuilder', function () {
         assert.sameMembers(modulesURL[0].modules, ['aui-core']);
     });
 
+    it('should append a .js extension to the path if the extension is missing', function() {
+        var urlBuilder = new global.URLBuilder(configParser);
+
+        var modulesURL = urlBuilder.build(['module.js']);
+
+        assert.strictEqual(modulesURL.length, 1);
+
+        assert.strictEqual(modulesURL[0].url, 'http://localhost:3000/combo?/modules/module.js/src/module.js');
+        assert.sameMembers(modulesURL[0].modules, ['module.js']);
+    });
+
     it('should create URL for module with full path', function () {
         var urlBuilder = new global.URLBuilder(configParser);
 
