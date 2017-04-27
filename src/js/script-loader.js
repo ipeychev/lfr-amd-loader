@@ -418,7 +418,7 @@ var LoaderProtoMethods = {
         for (var i = 0; i < moduleNames.length; i++) {
             var module = registeredModules[moduleNames[i]];
 
-            var mappedDependencies = configParser.mapModule(module.dependencies);
+            var mappedDependencies = configParser.mapDependency(module.name, module.dependencies);
 
             for (var j = 0; j < mappedDependencies.length; j++) {
                 var dependency = mappedDependencies[j];
@@ -705,6 +705,7 @@ var LoaderProtoMethods = {
             // Leave exports implementation undefined by default
             var exportsImpl;
             var configParser = this._getConfigParser();
+            var pathResolver = this._getPathResolver();
 
             for (var j = 0; j < module.dependencies.length; j++) {
                 var dependency = module.dependencies[j];
@@ -727,24 +728,24 @@ var LoaderProtoMethods = {
                         if (argc > 1) {
                             global.require.apply(global.Loader, arguments);
                         } else {
-                            var mappedModuleName = configParser.mapModule(moduleName);
+                            moduleName = pathResolver.resolvePath(module.name, moduleName);
 
-                            for (var k = 0; k < module.dependencies.length; k++) {
-                                var dependency = module.dependencies[k];
+                            moduleName = configParser.mapDependency(module.name, moduleName);
 
-                                if (dependency === mappedModuleName) {
-                                    return dependencyImplementations[k];
-                                }
+                            var dependencyModule = configParser.getModules()[moduleName];
+
+                            if (!dependencyModule || !dependencyModule.implementation) {
+                                throw new Error('Module "' + moduleName + '" has not been loaded yet for context: ' + module.name);
                             }
 
-                            throw new Error('Module "' + moduleName + '" has not been loaded yet for context: ' + module.name);
+                            return dependencyModule.implementation
                         }
-                    };
+                     };
 
                     dependencyImplementations.push(localRequire);
                 } else {
                     // otherwise set as value the implementation of the registered module
-                    var dependencyModule = registeredModules[configParser.mapModule(dependency)];
+                    var dependencyModule = registeredModules[configParser.mapDependency(module.name, dependency)];
 
                     var impl = dependencyModule.implementation;
 
