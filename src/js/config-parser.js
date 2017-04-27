@@ -152,6 +152,88 @@ ConfigParser.prototype = {
     },
 
     /**
+     * Maps dependency names to their aliases and version them.
+     *
+     * This function is similar to mapModule but evaluates the dependency module
+     * name in the context of a module so that it can apply more relevant
+     * information like, for example, dependency versions.
+     *
+     * @param {string} moduleName The name of the module that defines the context in which the mapping of versions is done
+     * @param {array|string} dependency The name(s) of the dependencies being mapped
+     * @return {array|string} The mapped and versioned dependency name(s)
+     */
+    mapDependency: function(moduleName, dependency) {
+        var module = this.getModules()[moduleName];
+
+        if (!module) {
+            throw new Error('Unknown module ' + moduleName);
+        }
+
+        var dependencies;
+
+        if (Array.isArray(dependency)) {
+            dependencies = dependency.slice(0);
+        } else {
+            dependencies = [dependency];
+        }
+
+        if (module.dependencyVersions) {
+            for (var i = 0; i < dependencies.length; i++) {
+                var tmpDependency = dependencies[i];
+
+                if (this._isDependencyKeyword(tmpDependency)) {
+                    continue;
+                }
+
+                var split = this._splitPackageAndPath(tmpDependency);
+
+                var version = module.dependencyVersions[split.package];
+
+                if (version) {
+                    dependencies[i] = split.package + '@' + version + split.path;
+                }
+            }
+        }
+
+        for (var i = 0; i < dependencies.length; i++) {
+            dependencies[i] = this.mapModule(dependencies[i]);
+        }
+
+        return Array.isArray(dependency) ? dependencies : dependencies[0];
+    },
+
+    /**
+     * Test if a dependency is an AMD reserved keyword like 'require',
+     * 'exports', and the like.
+     *
+     * @param {string} dependency
+     * @return {bool} true if the dependency is an AMD reserved keyword
+     */
+    _isDependencyKeyword: function(dependency) {
+        return (dependency === 'require' || dependency === 'exports' || dependency === 'module');
+    },
+
+    /**
+     * Split a full module name into package name and path (rest including any
+     * leading '/').
+     *
+     * @param {string} moduleName a full module name
+     * @return {object} an object with 'package' and 'path' properties
+     */
+    _splitPackageAndPath: function(moduleName) {
+        var i = moduleName.indexOf('/');
+
+        if (i == -1) {
+            i = moduleName.length + 1;
+        }
+
+        return {
+            package: moduleName.substring(0, i),
+            path: moduleName.substring(i)
+        };
+    },
+
+    /**
      * Parses configuration object.
      *
      * @protected
