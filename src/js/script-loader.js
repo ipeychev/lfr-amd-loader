@@ -196,6 +196,10 @@ var LoaderProtoMethods = {
 
         var rejectTimeout;
 
+        if (!'Promise' in global && global.ES6Promise) {
+            global.Promise = global.ES6Promise;
+        }
+
         new Promise(function(resolve, reject) {
             // Resolve the dependencies of the requested modules,
             // then load them and resolve the Promise
