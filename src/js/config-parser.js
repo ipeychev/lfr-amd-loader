@@ -152,6 +152,77 @@ ConfigParser.prototype = {
     },
 
     /**
+     * Maps dependency names to their aliases and version them.
+     *
+     * This function is similar to mapModule but evaluates the dependency module
+     * name in the context of a module so that it can apply more relevant
+     * information like, for example, dependency versions.
+     *
+     * @param {string} moduleName The name of the module that defines the context in which the mapping of versions is done
+     * @param {array|string} dependency The name(s) of the dependencies being mapped
+     * @return {array|string} The mapped and versioned dependency name(s)
+     */
+    mapDependency: function(moduleName, dependency) {
+        var module = this.getModules()[moduleName];
+
+        if (!module) {
+            throw new Error('Unknown module ' + moduleName);
+        }
+
+        var dependencies;
+
+        if (Array.isArray(dependency)) {
+            dependencies = dependency.slice(0);
+        } else {
+            dependencies = [dependency];
+        }
+
+        if (module.map) {
+            var map = module.map;
+
+            for (var i = 0; i < dependencies.length; i++) {
+                var tmpDependency = dependencies[i];
+
+                if (this._isDependencyKeyword(tmpDependency)) {
+                    continue;
+                }
+
+                for (var key in map) {
+                    if (tmpDependency == key) {
+                        dependencies[i] = map[key];
+                        break;
+                    }
+
+                    var search = new RegExp(key + '/(.*)');
+                    var result = search.exec(tmpDependency);
+
+                    if (result != null) {
+                        dependencies[i] = map[key] + '/' + result[1];
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (var i = 0; i < dependencies.length; i++) {
+            dependencies[i] = this.mapModule(dependencies[i]);
+        }
+
+        return Array.isArray(dependency) ? dependencies : dependencies[0];
+    },
+
+    /**
+     * Test if a dependency is an AMD reserved keyword like 'require',
+     * 'exports', and the like.
+     *
+     * @param {string} dependency
+     * @return {bool} true if the dependency is an AMD reserved keyword
+     */
+    _isDependencyKeyword: function(dependency) {
+        return (dependency === 'require' || dependency === 'exports' || dependency === 'module');
+    },
+
+    /**
      * Parses configuration object.
      *
      * @protected
