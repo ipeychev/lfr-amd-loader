@@ -161,15 +161,17 @@ describe('ConfigParser', function() {
     it('should map versioned dependencies correctly', function() {
         var configParser = new global.ConfigParser();
 
+        var moduleMap = {
+            'isarray': 'isarray@1.0.0'
+        };
+
         configParser.addModule({
             'name': 'isobject@2.1.0/index',
             'dependencies': ['module', 'require', 'isarray', 'isarray/index'],
-            'map': {
-                'isarray': 'isarray@1.0.0'
-            }
+            'map': moduleMap
         });
 
-        assert.strictEqual('isarray@1.0.0', configParser.mapDependency('isobject@2.1.0/index', 'isarray'));
-        assert.strictEqual('isarray@1.0.0/index', configParser.mapDependency('isobject@2.1.0/index', 'isarray/index'));
+        assert.strictEqual('isarray@1.0.0', configParser.mapModule('isarray', moduleMap));
+        assert.strictEqual('isarray@1.0.0/index', configParser.mapModule('isarray/index', moduleMap));
     });
 });

@@ -92,13 +92,28 @@ ConfigParser.prototype = {
      * then a corresponding alias will be searched. If found, the name will be replaced,
      * so it will look like user did require('liferay@1.0.0/html/js/ac.es',...).
      *
+     * Additionally, modules can define a custom map to alias module names just in the context
+     * of that module loading operation. When present, the contextual module mapping will take
+     * precedence over the general one.
+     *
      * @protected
      * @param {array|string} module The module which have to be mapped or array of modules.
+     * @param {?object} contextMap Contextual module mapping information relevant to the current load operation
      * @return {array|string} The mapped module or array of mapped modules.
      */
-    mapModule: function(module) {
-        if (!this._config.maps) {
+    mapModule: function(module, contextMap) {
+        if (!this._config.maps && !contextMap) {
             return module;
+        }
+
+        var maps = {};
+
+        if (this._config.maps) {
+            this._mix(maps, this._config.maps);
+        }
+
+        if (contextMap) {
+            this._mix(maps, contextMap);
         }
 
         var modules;
@@ -114,10 +129,10 @@ ConfigParser.prototype = {
 
             var found = false;
 
-            for (var alias in this._config.maps) {
+            for (var alias in maps) {
                 /* istanbul ignore else */
-                if (Object.prototype.hasOwnProperty.call(this._config.maps, alias)) {
-                    var aliasValue = this._config.maps[alias];
+                if (Object.prototype.hasOwnProperty.call(maps, alias)) {
+                    var aliasValue = maps[alias];
 
                     if (aliasValue.value && aliasValue.exactMatch) {
                         if (modules[i] === alias) {
@@ -143,8 +158,8 @@ ConfigParser.prototype = {
             }
 
             /* istanbul ignore else */
-            if(!found && typeof this._config.maps['*'] === 'function') {
-                modules[i] = this._config.maps['*'](tmpModule);
+            if(!found && typeof maps['*'] === 'function') {
+                modules[i] = maps['*'](tmpModule);
             }
         }
 
@@ -152,74 +167,22 @@ ConfigParser.prototype = {
     },
 
     /**
-     * Maps dependency names to their aliases and version them.
+     * Adds all properties from the supplier to the receiver.
+     * The function will add all properties, not only these owned by the supplier.
      *
-     * This function is similar to mapModule but evaluates the dependency module
-     * name in the context of a module so that it can apply more relevant
-     * information like, for example, dependency versions.
-     *
-     * @param {string} moduleName The name of the module that defines the context in which the mapping of versions is done
-     * @param {array|string} dependency The name(s) of the dependencies being mapped
-     * @return {array|string} The mapped and versioned dependency name(s)
+     * @private
+     * @method _mix
+     * @param {Object} receiver The object which will receive properties.
+     * @param {Object} supplier The object which provides properties.
      */
-    mapDependency: function(moduleName, dependency) {
-        var module = this.getModules()[moduleName];
+    _mix: function(receiver, supplier) {
+        var hasOwnProperty = Object.prototype.hasOwnProperty;
 
-        if (!module) {
-            throw new Error('Unknown module ' + moduleName);
-        }
-
-        var dependencies;
-
-        if (Array.isArray(dependency)) {
-            dependencies = dependency.slice(0);
-        } else {
-            dependencies = [dependency];
-        }
-
-        if (module.map) {
-            var map = module.map;
-
-            for (var i = 0; i < dependencies.length; i++) {
-                var tmpDependency = dependencies[i];
-
-                if (this._isDependencyKeyword(tmpDependency)) {
-                    continue;
-                }
-
-                for (var key in map) {
-                    if (tmpDependency == key) {
-                        dependencies[i] = map[key];
-                        break;
-                    }
-
-                    var search = new RegExp(key + '/(.*)');
-                    var result = search.exec(tmpDependency);
-
-                    if (result != null) {
-                        dependencies[i] = map[key] + '/' + result[1];
-                        break;
-                    }
-                }
+        for (var key in supplier) {
+            if (hasOwnProperty.call(supplier, key)) {
+                receiver[key] = supplier[key];
             }
         }
-
-        for (var i = 0; i < dependencies.length; i++) {
-            dependencies[i] = this.mapModule(dependencies[i]);
-        }
-
-        return Array.isArray(dependency) ? dependencies : dependencies[0];
-    },
-
-    /**
-     * Test if a dependency is an AMD reserved keyword like 'require',
-     * 'exports', and the like.
-     *
-     * @param {string} dependency
-     * @return {bool} true if the dependency is an AMD reserved keyword
-     */
-    _isDependencyKeyword: function(dependency) {
-        return (dependency === 'require' || dependency === 'exports' || dependency === 'module');
     },
 
     /**
