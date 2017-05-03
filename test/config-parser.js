@@ -157,4 +157,21 @@ describe('ConfigParser', function() {
 
         assert.sameMembers(['liferay@1.0.0', 'liferay2test'], configParser.mapModule(['liferay', 'liferay2']));
     });
+
+    it('should map versioned dependencies correctly', function() {
+        var configParser = new global.ConfigParser();
+
+        var moduleMap = {
+            'isarray': 'isarray@1.0.0'
+        };
+
+        configParser.addModule({
+            'name': 'isobject@2.1.0/index',
+            'dependencies': ['module', 'require', 'isarray', 'isarray/index'],
+            'map': moduleMap
+        });
+
+        assert.strictEqual('isarray@1.0.0', configParser.mapModule('isarray', moduleMap));
+        assert.strictEqual('isarray@1.0.0/index', configParser.mapModule('isarray/index', moduleMap));
+    });
 });

@@ -92,13 +92,28 @@ ConfigParser.prototype = {
      * then a corresponding alias will be searched. If found, the name will be replaced,
      * so it will look like user did require('liferay@1.0.0/html/js/ac.es',...).
      *
+     * Additionally, modules can define a custom map to alias module names just in the context
+     * of that module loading operation. When present, the contextual module mapping will take
+     * precedence over the general one.
+     *
      * @protected
      * @param {array|string} module The module which have to be mapped or array of modules.
+     * @param {?object} contextMap Contextual module mapping information relevant to the current load operation
      * @return {array|string} The mapped module or array of mapped modules.
      */
-    mapModule: function(module) {
-        if (!this._config.maps) {
+    mapModule: function(module, contextMap) {
+        if (!this._config.maps && !contextMap) {
             return module;
+        }
+
+        var maps = {};
+
+        if (this._config.maps) {
+            this._mix(maps, this._config.maps);
+        }
+
+        if (contextMap) {
+            this._mix(maps, contextMap);
         }
 
         var modules;
@@ -114,10 +129,10 @@ ConfigParser.prototype = {
 
             var found = false;
 
-            for (var alias in this._config.maps) {
+            for (var alias in maps) {
                 /* istanbul ignore else */
-                if (Object.prototype.hasOwnProperty.call(this._config.maps, alias)) {
-                    var aliasValue = this._config.maps[alias];
+                if (Object.prototype.hasOwnProperty.call(maps, alias)) {
+                    var aliasValue = maps[alias];
 
                     if (aliasValue.value && aliasValue.exactMatch) {
                         if (modules[i] === alias) {
@@ -143,12 +158,31 @@ ConfigParser.prototype = {
             }
 
             /* istanbul ignore else */
-            if(!found && typeof this._config.maps['*'] === 'function') {
-                modules[i] = this._config.maps['*'](tmpModule);
+            if(!found && typeof maps['*'] === 'function') {
+                modules[i] = maps['*'](tmpModule);
             }
         }
 
         return Array.isArray(module) ? modules : modules[0];
+    },
+
+    /**
+     * Adds all properties from the supplier to the receiver.
+     * The function will add all properties, not only these owned by the supplier.
+     *
+     * @private
+     * @method _mix
+     * @param {Object} receiver The object which will receive properties.
+     * @param {Object} supplier The object which provides properties.
+     */
+    _mix: function(receiver, supplier) {
+        var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+        for (var key in supplier) {
+            if (hasOwnProperty.call(supplier, key)) {
+                receiver[key] = supplier[key];
+            }
+        }
     },
 
     /**
