@@ -164,8 +164,8 @@ describe('ConfigParser', function() {
         configParser.addModule({
             'name': 'isobject@2.1.0/index',
             'dependencies': ['module', 'require', 'isarray', 'isarray/index'],
-            'dependencyVersions': {
-                'isarray': '1.0.0'
+            'map': {
+                'isarray': 'isarray@1.0.0'
             }
         });
 

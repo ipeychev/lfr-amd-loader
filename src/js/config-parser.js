@@ -177,7 +177,9 @@ ConfigParser.prototype = {
             dependencies = [dependency];
         }
 
-        if (module.dependencyVersions) {
+        if (module.map) {
+            var map = module.map;
+
             for (var i = 0; i < dependencies.length; i++) {
                 var tmpDependency = dependencies[i];
 
@@ -185,12 +187,19 @@ ConfigParser.prototype = {
                     continue;
                 }
 
-                var split = this._splitPackageAndPath(tmpDependency);
+                for (var key in map) {
+                    if (tmpDependency == key) {
+                        dependencies[i] = map[key];
+                        break;
+                    }
 
-                var version = module.dependencyVersions[split.package];
+                    var search = new RegExp(key + '/(.*)');
+                    var result = search.exec(tmpDependency);
 
-                if (version) {
-                    dependencies[i] = split.package + '@' + version + split.path;
+                    if (result != null) {
+                        dependencies[i] = map[key] + '/' + result[1];
+                        break;
+                    }
                 }
             }
         }
@@ -211,26 +220,6 @@ ConfigParser.prototype = {
      */
     _isDependencyKeyword: function(dependency) {
         return (dependency === 'require' || dependency === 'exports' || dependency === 'module');
-    },
-
-    /**
-     * Split a full module name into package name and path (rest including any
-     * leading '/').
-     *
-     * @param {string} moduleName a full module name
-     * @return {object} an object with 'package' and 'path' properties
-     */
-    _splitPackageAndPath: function(moduleName) {
-        var i = moduleName.indexOf('/');
-
-        if (i == -1) {
-            i = moduleName.length + 1;
-        }
-
-        return {
-            package: moduleName.substring(0, i),
-            path: moduleName.substring(i)
-        };
     },
 
     /**
