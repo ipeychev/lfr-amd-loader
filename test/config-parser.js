@@ -157,4 +157,53 @@ describe('ConfigParser', function() {
 
         assert.sameMembers(['liferay@1.0.0', 'liferay2test'], configParser.mapModule(['liferay', 'liferay2']));
     });
+
+    it('should map local modules correctly', function() {
+        var configParser = new global.ConfigParser();
+
+        var moduleMap = {
+            'isarray': 'isarray@1.0.0'
+        };
+
+        configParser.addModule({
+            'name': 'isobject@2.1.0/index',
+            'dependencies': ['module', 'require', 'isarray', 'isarray/index'],
+            'map': moduleMap
+        });
+
+        assert.strictEqual('isarray@1.0.0', configParser.mapModule('isarray', moduleMap));
+        assert.strictEqual('isarray@1.0.0/index', configParser.mapModule('isarray/index', moduleMap));
+    });
+
+    it('should map local modules first, followed by global', function() {
+        var configParser = new global.ConfigParser();
+
+        var moduleMap = {
+            'isarray': 'isarray@1.0.0'
+        };
+
+        configParser._config = {
+            maps: {
+                'isarray@1.0.0': {value: 'isarray@1.0.0/index', exactMatch: true}
+            }
+        };
+
+        assert.strictEqual('isarray@1.0.0/index', configParser.mapModule('isarray', moduleMap));
+    });
+
+    it('local maps should take precedence over globals when both apply', function() {
+        var configParser = new global.ConfigParser();
+
+        var moduleMap = {
+            'isarray': 'this-should-be-applied'
+        };
+
+        configParser._config = {
+            maps: {
+                'isarray': {value: 'this-should-not-be-applied', exactMatch: true}
+            }
+        };
+
+        assert.strictEqual('this-should-be-applied', configParser.mapModule('isarray', moduleMap));
+    });
 });

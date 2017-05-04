@@ -92,15 +92,16 @@ ConfigParser.prototype = {
      * then a corresponding alias will be searched. If found, the name will be replaced,
      * so it will look like user did require('liferay@1.0.0/html/js/ac.es',...).
      *
+     * Additionally, modules can define a custom map to alias module names just in the context
+     * of that module loading operation. When present, the contextual module mapping will take
+     * precedence over the general one.
+     *
      * @protected
      * @param {array|string} module The module which have to be mapped or array of modules.
+     * @param {?object} contextMap Contextual module mapping information relevant to the current load operation
      * @return {array|string} The mapped module or array of mapped modules.
      */
-    mapModule: function(module) {
-        if (!this._config.maps) {
-            return module;
-        }
-
+    mapModule: function(module, contextMap) {
         var modules;
 
         if (Array.isArray(module)) {
@@ -109,15 +110,74 @@ ConfigParser.prototype = {
             modules = [module];
         }
 
+        if (contextMap) {
+            modules = modules.map(this._getModuleMatcher(contextMap));
+        }
+
+        if (this._config.maps) {
+            modules = modules.map(this._getModuleMatcher(this._config.maps));
+        }
+
+        return Array.isArray(module) ? modules : modules[0];
+    },
+
+    /**
+     * Returns a mapper function to convert maps module names to their aliases
+     *
+     * @protected
+     * @param {object} map Module mapping definition
+     * @return a mapper function that receives a module name and maps it according to the given map
+     */
+    _getModuleMatcher: function(map) {
+        return function(module) {
+            for (var alias in map) {
+                /* istanbul ignore else */
+                if (Object.prototype.hasOwnProperty.call(map, alias)) {
+                    var aliasValue = map[alias];
+
+                    if (aliasValue.value && aliasValue.exactMatch) {
+                        if (module === alias) {
+                            return aliasValue.value;
+                        }
+                    } else {
+                        if (aliasValue.value) {
+                            aliasValue = aliasValue.value;
+                        }
+
+                        if (module === alias || module.indexOf(alias + '/') === 0) {
+                            return aliasValue + module.substring(alias.length);
+                        }
+                    }
+                }
+            }
+
+            /* istanbul ignore else */
+            if (typeof map['*'] === 'function') {
+                return map['*'](module);
+            }
+
+            return module;
+        };
+    },
+
+    /**
+     * Maps module names to their aliases in place
+     *
+     * @protected
+     * @param {array} modules The array of modules which have to be mapped (this array is modified in place).
+     * @param {object} map Module mapping definition
+     * @return the given modules array
+     */
+    _matchModules: function(modules, map) {
         for (var i = 0; i < modules.length; i++) {
             var tmpModule = modules[i];
 
             var found = false;
 
-            for (var alias in this._config.maps) {
+            for (var alias in map) {
                 /* istanbul ignore else */
-                if (Object.prototype.hasOwnProperty.call(this._config.maps, alias)) {
-                    var aliasValue = this._config.maps[alias];
+                if (Object.prototype.hasOwnProperty.call(map, alias)) {
+                    var aliasValue = map[alias];
 
                     if (aliasValue.value && aliasValue.exactMatch) {
                         if (modules[i] === alias) {
@@ -132,8 +192,7 @@ ConfigParser.prototype = {
                         }
 
                         if (tmpModule === alias || tmpModule.indexOf(alias + '/') === 0) {
-                            tmpModule = aliasValue + tmpModule.substring(alias.length);
-                            modules[i] = tmpModule;
+                            modules[i] = aliasValue + tmpModule.substring(alias.length);
 
                             found = true;
                             break;
@@ -142,13 +201,17 @@ ConfigParser.prototype = {
                 }
             }
 
+            if (found) {
+                continue;
+            }
+
             /* istanbul ignore else */
-            if(!found && typeof this._config.maps['*'] === 'function') {
-                modules[i] = this._config.maps['*'](tmpModule);
+            if (typeof map['*'] === 'function') {
+                modules[i] = map['*'](tmpModule);
             }
         }
 
-        return Array.isArray(module) ? modules : modules[0];
+        return modules;
     },
 
     /**
