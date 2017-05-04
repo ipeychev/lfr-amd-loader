@@ -109,46 +109,130 @@ ConfigParser.prototype = {
             modules = [module];
         }
 
-        for (var i = 0; i < modules.length; i++) {
-            var tmpModule = modules[i];
+        modules = modules.map(this._getModuleMapper(this._config.maps));
 
-            var found = false;
+        return Array.isArray(module) ? modules : modules[0];
+    },
 
-            for (var alias in this._config.maps) {
-                /* istanbul ignore else */
-                if (Object.prototype.hasOwnProperty.call(this._config.maps, alias)) {
-                    var aliasValue = this._config.maps[alias];
+    /**
+     * Creates a function that transforms module names based on a provided
+     * set of mappings.
+     *
+     * @protected
+     * @param {object} maps Mapping information.
+     * @return {function} The generated mapper function
+     */
+    _getModuleMapper: function(maps) {
+        return function(module) {
+            var result;
 
-                    if (aliasValue.value && aliasValue.exactMatch) {
-                        if (modules[i] === alias) {
-                            modules[i] = aliasValue.value;
+            result = this._mapExactMatch(module, maps);
 
-                            found = true;
-                            break;
-                        }
-                    } else {
-                        if (aliasValue.value) {
-                            aliasValue = aliasValue.value;
-                        }
+            // Apply partial mapping only if exactMatch hasn't been
+            // already applied for this mapping
+            if (!result.matched) {
+                result = this._mapPartialMatch(module, maps);
+            }
 
-                        if (tmpModule === alias || tmpModule.indexOf(alias + '/') === 0) {
-                            tmpModule = aliasValue + tmpModule.substring(alias.length);
-                            modules[i] = tmpModule;
+            // Apply * mapping only if neither exactMatch nor
+            // partialMatch have been already applied for this mapping
+            if (!result.matched) {
+                result = this._mapWildcardMatch(module, maps);
+            }
 
-                            found = true;
-                            break;
-                        }
+            return result.result;
+        }.bind(this);
+    },
+
+    /**
+     * Transforms a module name using the exactMatch mappings
+     * in a provided mapping object.
+     *
+     * @protected
+     * @param {string} module The module which have to be mapped.
+     * @param {object} maps Mapping information.
+     * @return {object} An object with a boolean `matched` field and a string `result` field containing the mapped module name
+     */
+    _mapExactMatch: function(module, maps) {
+        for (var alias in maps) {
+            /* istanbul ignore else */
+            if (Object.prototype.hasOwnProperty.call(maps, alias)) {
+                var aliasValue = maps[alias];
+
+                if (aliasValue.value && aliasValue.exactMatch) {
+                    if (module === alias) {
+                        return {
+                            matched: true,
+                            result: aliasValue.value
+                        };
                     }
                 }
             }
+        }
 
+        return {
+            matched: false,
+            result: module
+        };
+    },
+
+    /**
+     * Transforms a module name using the partial mappings
+     * in a provided mapping object.
+     *
+     * @protected
+     * @param {string} module The module which have to be mapped.
+     * @param {object} maps Mapping information.
+     * @return {object} An object with a boolean `matched` field and a string `result` field containing the mapped module name
+     */
+    _mapPartialMatch: function(module, maps) {
+        for (var alias in maps) {
             /* istanbul ignore else */
-            if(!found && typeof this._config.maps['*'] === 'function') {
-                modules[i] = this._config.maps['*'](tmpModule);
+            if (Object.prototype.hasOwnProperty.call(maps, alias)) {
+                var aliasValue = maps[alias];
+
+                if (!aliasValue.exactMatch) {
+                    if (aliasValue.value) {
+                        aliasValue = aliasValue.value;
+                    }
+
+                    if (module === alias || module.indexOf(alias + '/') === 0) {
+                        return {
+                            matched: true,
+                            result: aliasValue + module.substring(alias.length)
+                        };
+                    }
+                }
             }
         }
 
-        return Array.isArray(module) ? modules : modules[0];
+        return {
+            matched: false,
+            result: module
+        };
+    },
+
+    /**
+     * Transforms a module name using the wildcard mapping in a provided mapping
+     * object.
+     *
+     * @protected
+     * @param {string} module The module which have to be mapped.
+     * @param {object} maps Mapping information.
+     * @return {object} An object with a boolean `matched` field and a string `result` field containing the mapped module name
+     */
+    _mapWildcardMatch: function(module, maps) {
+        if(typeof maps['*'] === 'function') {
+            return {
+                matched: true,
+                result: maps['*'](module)
+            };
+        }
+
+        return {
+            matched: false,
+            result: module
+        }
     },
 
     /**
