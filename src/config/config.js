@@ -3,17 +3,17 @@ var __CONFIG__ = {
     basePath: '/modules',
     combine: true,
     paths: {
-        'jquery': 'http://code.jquery.com/jquery-2.1.3.min.js',
-        'liferay@1.0.0': '.'
-    }
+        jquery: 'http://code.jquery.com/jquery-2.1.3.min.js',
+        'liferay@1.0.0': '.',
+    },
 };
 __CONFIG__.maps = {
-    'liferay': 'liferay@1.0.0',
-    'liferay2': 'liferay@1.0.0',
+    liferay: 'liferay@1.0.0',
+    liferay2: 'liferay@1.0.0',
     'liferay@1.0.0/package': {
         value: 'liferay@1.0.0/package/index',
-        exactMatch: true
-    }
+        exactMatch: true,
+    },
 };
 __CONFIG__.modules = {
     "liferay@1.0.0/aui-base": {
