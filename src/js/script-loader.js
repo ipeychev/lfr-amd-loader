@@ -244,8 +244,10 @@ var LoaderProtoMethods = {
 							error.mappedModules = mappedModules;
 							error.missingDependencies = dependencies.filter(
 								function(dep) {
-									return !registeredModules[dep]
-										.implementation;
+									return (
+										typeof registeredModules[dep]
+											.implementation === 'undefined'
+									);
 								}
 							);
 							error.modules = modules;
@@ -779,9 +781,9 @@ var LoaderProtoMethods = {
 		for (var i = 0; i < modules.length; i++) {
 			var module = modules[i];
 
-			if (module.implementation) {
+			if (typeof module.implementation !== 'undefined') {
 				continue;
-			} else if (module.exports) {
+			} else if (typeof module.exports !== 'undefined') {
 				module.pendingImplementation = module.implementation = this._getValueGlobalNS(
 					module.exports
 				);
@@ -791,7 +793,7 @@ var LoaderProtoMethods = {
 			var dependencyImplementations = [];
 
 			// Leave exports implementation undefined by default
-			var exportsImpl;
+			var moduleImpl = { exports: {} };
 			var configParser = this._getConfigParser();
 			var pathResolver = this._getPathResolver();
 
@@ -802,13 +804,9 @@ var LoaderProtoMethods = {
 				// create an empty object and pass it as implementation of
 				// 'exports' module
 				if (dependency === 'exports') {
-					exportsImpl = {};
-
-					dependencyImplementations.push(exportsImpl);
+					dependencyImplementations.push(moduleImpl.exports);
 				} else if (dependency === 'module') {
-					exportsImpl = { exports: {} };
-
-					dependencyImplementations.push(exportsImpl);
+					dependencyImplementations.push(moduleImpl);
 				} else if (dependency === 'require') {
 					var localRequire = function(moduleName) {
 						var argc = arguments.length;
@@ -832,7 +830,8 @@ var LoaderProtoMethods = {
 
 							if (
 								!dependencyModule ||
-								!dependencyModule.implementation
+								typeof dependencyModule.implementation ===
+									'undefined'
 							) {
 								throw new Error(
 									'Module "' +
@@ -879,17 +878,17 @@ var LoaderProtoMethods = {
 				result = module.pendingImplementation;
 			}
 
-			// Store as implementation either the returned value from the function's invocation,
-			// or one of these:
-			// 1. If the passed object has 'exports' property (in case of 'module' dependency), get this one.
-			// 2. Otherwise, get the passed object itself (in case of 'exports' dependency)
+			// Store as implementation either the returned value from the
+			// function's invocation, or the value inside module.exports magic
+			// dependency.
 			//
-			// The final implementation of this module may be undefined if there is no
-			// returned value, or the object does not have 'exports' or 'module' dependency.
-			if (result) {
+			// The final implementation of this module may be {} if there is no
+			// returned value, or the object does not assign anything to
+			// module.exports.
+			if (typeof result !== 'undefined') {
 				module.implementation = result;
-			} else if (exportsImpl) {
-				module.implementation = exportsImpl.exports || exportsImpl;
+			} else {
+				module.implementation = moduleImpl.exports;
 			}
 		}
 	},

@@ -1009,6 +1009,81 @@ describe('Loader', function() {
 		}, 50);
 	});
 
+	it('should pass correct dependencies when module and exports are requested', function(
+		done
+	) {
+		var passedModule;
+		var passedExports;
+
+		Loader.define('module', ['module', 'exports'], function(
+			module,
+			exports
+		) {
+			passedModule = module;
+			passedExports = exports;
+		});
+
+		Loader.require('module', function() {}, console.error);
+
+		setTimeout(function() {
+			assert.isDefined(passedModule);
+			assert.isDefined(passedModule.exports);
+			assert.isDefined(passedExports);
+			assert.isTrue(
+				passedModule.exports === passedExports,
+				'module.exports and exports are not the same object'
+			);
+
+			done();
+		}, 50);
+	});
+
+	it('should work correctly when a module exports `false`', function(done) {
+		var failure = sinon.spy(function(error) {
+			console.error(error);
+		});
+		var success = sinon.spy(function(module) {
+			this.module = module;
+		});
+
+		Loader.define('module', ['module'], function(module) {
+			module.exports = false;
+		});
+
+		Loader.require('module', success, failure);
+
+		setTimeout(function() {
+			assert.isTrue(failure.notCalled, 'Failure should not be called');
+			assert.isTrue(success.calledOnce, 'Success should be called once');
+			assert.strictEqual(success.module, false);
+
+			done();
+		}, 50);
+	});
+
+	it('should work correctly when a module exports `null`', function(done) {
+		var failure = sinon.spy(function(error) {
+			console.error(error);
+		});
+		var success = sinon.spy(function(module) {
+			this.module = module;
+		});
+
+		Loader.define('module', ['module'], function(module) {
+			module.exports = null;
+		});
+
+		Loader.require('module', success, failure);
+
+		setTimeout(function() {
+			assert.isTrue(failure.notCalled, 'Failure should not be called');
+			assert.isTrue(success.calledOnce, 'Success should be called once');
+			assert.isNull(success.module);
+
+			done();
+		}, 50);
+	});
+
 	describe('when working with anonymous modules', function() {
 		beforeEach(function() {
 			Object.keys(require.cache).forEach(function(cache) {
