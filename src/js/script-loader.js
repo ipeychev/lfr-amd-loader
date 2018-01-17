@@ -157,6 +157,53 @@ var LoaderProtoMethods = {
 	},
 
 	/**
+     * Returns a function which when invoked will require the list of modules and invoke the callback.
+     *
+     * @memberof! Loader#
+     * @param {array|string[]} modules Modules can be specified as an array of strings or provided as
+     *     multiple string parameters.
+     * @param {function} success Callback, which will be invoked in case of success. The provided parameters will
+     *     be implementations of all required modules.
+     * @param {function} failure Callback, which will be invoked in case of failure. One parameter with
+     *     information about the error will be provided.
+	 * @return {function}
+     */
+	lazy: function() {
+		var self = this;
+
+		var args = [];
+		var i = arguments.length;
+		while (i--) args[i] = arguments[i];
+
+		args = self._parseRequireArgs.apply(this, args);
+
+		var failureCallback = args.failureCallback;
+		var modules = args.modules;
+		var successCallback = args.successCallback;
+
+		return function() {
+			var args = [];
+			var i = arguments.length;
+			while (i--) args[i] = arguments[i];
+
+			self.require(
+				modules,
+				function() {
+					var moduleImplementations = [];
+					i = arguments.length;
+					while (i--) moduleImplementations[i] = arguments[i];
+
+					successCallback.apply(
+						successCallback,
+						moduleImplementations.concat(args)
+					);
+				},
+				failureCallback
+			);
+		};
+	},
+
+	/**
      * Requires list of modules. If a module is not yet registered, it will be ignored and its implementation
      * in the provided success callback will be left undefined.<br>
      *
@@ -173,40 +220,15 @@ var LoaderProtoMethods = {
 
 		console.log('REQUIRE CALLED');
 
-		var failureCallback;
-		var i;
-		var modules;
-		var successCallback;
+		var args = [];
+		var i = arguments.length;
+		while (i--) args[i] = arguments[i];
 
-		// Modules can be specified by as an array, or just as parameters to the function
-		// We do not slice or leak arguments to not cause V8 performance penalties
-		// TODO: This could be extracted as an inline function (hint)
-		if (Array.isArray(arguments[0])) {
-			modules = arguments[0];
-			successCallback = typeof arguments[1] === 'function'
-				? arguments[1]
-				: null;
-			failureCallback = typeof arguments[2] === 'function'
-				? arguments[2]
-				: null;
-		} else {
-			modules = [];
+		args = self._parseRequireArgs.apply(this, args);
 
-			for (i = 0; i < arguments.length; ++i) {
-				if (typeof arguments[i] === 'string') {
-					modules[i] = arguments[i];
-
-					/* istanbul ignore else */
-				} else if (typeof arguments[i] === 'function') {
-					successCallback = arguments[i];
-					failureCallback = typeof arguments[++i] === 'function'
-						? arguments[i]
-						: /* istanbul ignore next */ null;
-
-					break;
-				}
-			}
-		}
+		var failureCallback = args.failureCallback;
+		var modules = args.modules;
+		var successCallback = args.successCallback;
 
 		console.log('REQUIRE called with', modules);
 
@@ -775,6 +797,62 @@ var LoaderProtoMethods = {
 				['Liferay AMD Loader:'].concat(args)
 			);
 		}
+	},
+
+	/**
+     * Parses arguments passed to `require` and `lazy` methods.
+     *
+     * @memberof! Loader#
+     * @param {array|string[]} modules Modules can be specified as an array of strings or provided as
+     *     multiple string parameters.
+     * @param {function} success Callback, which will be invoked in case of success. The provided parameters will
+     *     be implementations of all required modules.
+     * @param {function} failure Callback, which will be invoked in case of failure. One parameter with
+     *     information about the error will be provided.
+	 * @return {Object} Object containing the three arguments used by both the
+	 *     `require` and `lazy` methods.
+     */
+	_parseRequireArgs: function() {
+		var failureCallback;
+		var i;
+		var modules;
+		var successCallback;
+
+		// Modules can be specified by as an array, or just as parameters to the function
+		// We do not slice or leak arguments to not cause V8 performance penalties
+		// TODO: This could be extracted as an inline function (hint)
+		if (Array.isArray(arguments[0])) {
+			modules = arguments[0];
+			successCallback = typeof arguments[1] === 'function'
+				? arguments[1]
+				: null;
+			failureCallback = typeof arguments[2] === 'function'
+				? arguments[2]
+				: null;
+		} else {
+			modules = [];
+
+			for (i = 0; i < arguments.length; ++i) {
+				if (typeof arguments[i] === 'string') {
+					modules[i] = arguments[i];
+
+					/* istanbul ignore else */
+				} else if (typeof arguments[i] === 'function') {
+					successCallback = arguments[i];
+					failureCallback = typeof arguments[++i] === 'function'
+						? arguments[i]
+						: /* istanbul ignore next */ null;
+
+					break;
+				}
+			}
+		}
+
+		return {
+			failureCallback: failureCallback,
+			modules: modules,
+			successCallback: successCallback,
+		};
 	},
 
 	_error: function() {
