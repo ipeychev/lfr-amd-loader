@@ -1295,4 +1295,117 @@ describe('Loader', function() {
 			}, 50);
 		});
 	});
+
+	describe('Loader.lazy', function() {
+		it('should return a function which calls Loader.require only when invoked', function() {
+			sinon.spy(Loader, 'require');
+
+			var success = sinon.stub();
+			var failure = sinon.stub();
+
+			var fn = Loader.lazy('module1', 'module2', success, failure);
+
+			assert.isTrue(success.notCalled);
+			assert.isTrue(failure.notCalled);
+			assert.isTrue(Loader.require.notCalled);
+
+			fn();
+
+			assert.isTrue(Loader.require.calledOnce);
+			assert.deepEqual(Loader.require.args[0][0], ['module1', 'module2']);
+			assert.isFunction(Loader.require.args[0][1]);
+			assert.equal(Loader.require.args[0][2], failure);
+
+			Loader.require.restore();
+		});
+
+		it('should combine arguments passed to success callback', function(
+			done
+		) {
+			var success = sinon.stub();
+
+			var fn = Loader.lazy('module1', 'module2', success);
+
+			fn('foo', 'bar');
+
+			setTimeout(function() {
+				assert.isTrue(success.calledOnce);
+				assert.equal(success.args[0].length, 4);
+				assert.isFunction(success.args[0][0].module1log);
+				assert.isFunction(success.args[0][1].module2log);
+				assert.equal(success.args[0][2], 'foo');
+				assert.equal(success.args[0][3], 'bar');
+
+				done();
+			}, 50);
+		});
+
+		it('should call success callback for each invocation', function(done) {
+			var success = sinon.stub();
+
+			var fn = Loader.lazy('module1', 'module2', success);
+
+			fn('baz', 'buzz');
+			fn('foo', 'bar');
+
+			setTimeout(function() {
+				assert.isTrue(success.calledTwice);
+
+				assert.equal(success.args[0].length, 4);
+				assert.isFunction(success.args[0][0].module1log);
+				assert.isFunction(success.args[0][1].module2log);
+				assert.equal(success.args[0][2], 'foo');
+				assert.equal(success.args[0][3], 'bar');
+
+				assert.equal(success.args[1].length, 4);
+				assert.isFunction(success.args[1][0].module1log);
+				assert.isFunction(success.args[1][1].module2log);
+				assert.equal(success.args[1][2], 'baz');
+				assert.equal(success.args[1][3], 'buzz');
+
+				done();
+			}, 50);
+		});
+
+		it('should call failure callback', function(done) {
+			var failure = sinon.stub();
+			var success = sinon.stub();
+
+			var fn = Loader.lazy('moduleMissing', success, failure);
+
+			assert.isTrue(success.notCalled);
+			assert.isTrue(failure.notCalled);
+
+			fn('foo');
+
+			setTimeout(function() {
+				assert.isTrue(failure.calledOnce);
+				assert.isTrue(success.notCalled);
+
+				done();
+			}, 50);
+		});
+
+		it('should call failure callback for each invocation', function(done) {
+			global.__CONFIG__.waitTimeout = 1;
+
+			var failure = sinon.stub();
+			var success = sinon.stub();
+
+			var fn = Loader.lazy('moduleMissing', success, failure);
+
+			assert.isTrue(success.notCalled);
+			assert.isTrue(failure.notCalled);
+
+			fn('foo');
+			fn('foo');
+
+			setTimeout(function() {
+				assert.isTrue(failure.calledTwice);
+				assert.isTrue(success.notCalled);
+
+				done();
+			}, 50);
+		});
+	});
 });
