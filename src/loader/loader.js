@@ -239,7 +239,9 @@ export default class Loader extends EventEmitter {
 
 				/* istanbul ignore else */
 				if (successCallback) {
-					const moduleImplementations = this._getModuleImplementations(
+					let moduleImplementations;
+
+					moduleImplementations = this._getModuleImplementations(
 						mappedModules
 					);
 
@@ -358,24 +360,33 @@ export default class Loader extends EventEmitter {
 				const registeredModules = configParser.getModules();
 
 				let error = new Error('Load timeout for modules: ' + modules);
-				error.dependencies = dependencies;
+
+				error.modules = modules;
 				error.mappedModules = mappedModules;
-				error.missingDependencies = dependencies.filter(
+				error.dependencies = dependencies;
+
+				let filteredDeps;
+
+				filteredDeps = dependencies.filter(
 					dep =>
 						typeof registeredModules[dep].implementation ===
 						'undefined'
 				);
-				error.fetchedMissingDependencies = error.missingDependencies.filter(
+				error.missingDependencies = filteredDeps;
+
+				filteredDeps = error.missingDependencies.filter(
 					dep =>
 						typeof registeredModules[dep].pendingImplementation !==
 						'undefined'
 				);
-				error.unfetchedMissingDependencies = error.missingDependencies.filter(
+				error.fetchedMissingDependencies = filteredDeps;
+
+				filteredDeps = error.missingDependencies.filter(
 					dep =>
 						typeof registeredModules[dep].pendingImplementation ===
 						'undefined'
 				);
-				error.modules = modules;
+				error.unfetchedMissingDependencies = filteredDeps;
 
 				// @deprecated: fill `dependecies` field to maintain
 				// backward compatibility
