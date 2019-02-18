@@ -1,3 +1,9 @@
 {
-	"extends": "liferay"
+	"extends": "liferay",
+	"plugins": [
+		"no-only-tests"
+	],
+	"rules": {
+		"no-only-tests/no-only-tests": "error"
+	}
 }
