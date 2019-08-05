@@ -19,7 +19,7 @@ const copy = (input, output) =>
 const run = (binary, ...args) =>
 	spawnSync(binary, args, {
 		stdio: 'inherit',
-		shell : "true"
+		shell : true,
 	});
 
 module.exports = {copy, run};
