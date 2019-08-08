@@ -189,6 +189,9 @@ export default class Config {
 			const mappedName = this._mapModule(dependencyName, module.map);
 
 			dependencyModule = this._modules[mappedName];
+			if (!dependencyModule) {
+				dependencyModule = this._modules[mappedName + '/index'];
+			}
 		}
 
 		return dependencyModule;
@@ -229,6 +232,7 @@ export default class Config {
 	_mapModule(moduleName, contextMap) {
 		if (contextMap) {
 			moduleName = this._mapMatches(moduleName, contextMap);
+			return moduleName;
 		}
 
 		if (Object.keys(this._maps).length > 0) {

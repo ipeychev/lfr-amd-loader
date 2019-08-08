@@ -19,6 +19,7 @@ const copy = (input, output) =>
 const run = (binary, ...args) =>
 	spawnSync(binary, args, {
 		stdio: 'inherit',
+		// with this parameter, the Windows running problem solved
 		shell : true,
 	});
 
